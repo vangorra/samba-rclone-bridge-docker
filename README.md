@@ -21,12 +21,12 @@ docker run \
   - username: files
   - password: FrogsHouseLight
   
-  ## Usage
-  ```
-  usage:
+## Usage
+```
+usage:
   -d|--destination  The destination to copy the files. (required)
-  -u|--username     Username for the share. (Default: username)
-  -p|--password     Password for the share. (Default: password)
-  -s|--share        Share name. (Default: sharename)
-  -n|--name         Name of server. (Default servername)
-  ```
+  -u|--username     Username for the share. (Default: files)
+  -p|--password     Password for the share. (Default: FrogsHouseLight)
+  -s|--share        Share name. (Default: files)
+  -n|--name         Name of server. (Default files)
+```
