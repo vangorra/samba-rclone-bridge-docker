@@ -2,10 +2,10 @@
 set -e
 
 RCLONE_CONFIG_FILE="/config/rclone.conf"
-SHARE_USERNAME="files"
-SHARE_PASSWORD="FrogsHouseLight"
-SHARE_NAME="files"
-HOSTNAME="files"
+DEFAULT_SHARE_USERNAME="files"
+DEFAULT_SHARE_PASSWORD="FrogsHouseLight"
+DEFAULT_SHARE_NAME="files"
+DEFAULT_HOSTNAME="files"
 
 function errorMsg() {
   echo "ERROR: $@"
@@ -23,17 +23,12 @@ function showUsage() {
   cat << EOF
 usage:
   -d|--destination  The destination to copy the files. (required)
-  -u|--username     Username for the share. (Default: $SHARE_USERNAME)
-  -p|--password     Password for the share. (Default: $SHARE_PASSWORD)
-  -s|--share        Share name. (Default: $SHARE_NAME)
-  -n|--name         Name of server. (Default $HOSTNAME)
+  -u|--username     Username for the share. (Default: $DEFAULT_SHARE_USERNAME)
+  -p|--password     Password for the share. (Default: $DEFAULT_SHARE_PASSWORD)
+  -s|--share        Share name. (Default: $DEFAULT_SHARE_NAME)
+  -n|--name         Name of server. (Default $DEFAULT_HOSTNAME)
 EOF
 }
-
-if ! [[ -e "$RCLONE_CONFIG_FILE" ]]; then
-  errorMsg "'$RCLONE_CONFIG_FILE' does not exist. You need to map it with --volume <hostpath to config dir>:/config. Or you need to configure rclone."
-  exit 1
-fi
 
 while [[ "$#" -gt 0 ]]
 do
@@ -45,22 +40,22 @@ do
       shift
     ;;
     -u|--username)
-      SHARE_USERNAME=$(coalesce "$2" "$SHARE_USERNAME")
+      SHARE_USERNAME="$2"
       shift
       shift
     ;;
     -p|--password)
-      SHARE_PASSWORD=$(coalesce "$2" "$SHARE_PASSWORD")
+      SHARE_PASSWORD="$2"
       shift
       shift
     ;;
     -s|--share)
-      SHARE_NAME=$(coalesce "$2" "$SHARE_NAME")
+      SHARE_NAME="$2"
       shift
       shift
     ;;
     -n|--name)
-      HOSTNAME=$(coalesce "$2" "$HOSTNAME")
+      HOSTNAME="$2"
       shift
       shift
     ;;
@@ -75,6 +70,16 @@ do
     ;;
   esac
 done
+
+SHARE_USERNAME=$(coalesce "$SHARE_USERNAME" "$DEFAULT_SHARE_USERNAME")
+SHARE_PASSWORD=$(coalesce "$SHARE_PASSWORD" "$DEFAULT_SHARE_PASSWORD")
+SHARE_NAME=$(coalesce "$SHARE_NANE" "$DEFAULT_SHARE_NAME")
+HOSTNAME=$(coalesce "$HOSTNAME" "$DEFAULT_HOSTNAME")
+
+if ! [[ -e "$RCLONE_CONFIG_FILE" ]]; then
+  errorMsg "'$RCLONE_CONFIG_FILE' does not exist. You need to map it with --volume <hostpath to config dir>:/config. Or you need to configure rclone."
+  exit 1
+fi
 
 if [[ -z "$RCLONE_DESTINATION" ]]; then
   errorMsg "Destination was not provided."
