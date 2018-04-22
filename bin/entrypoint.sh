@@ -2,6 +2,7 @@
 set -e
 
 RCLONE_CONFIG_FILE="/config/rclone.conf"
+SETUP_COMPLETE_FILE="/samba-rclone-issetupcomplete"
 DEFAULT_SHARE_USERNAME="files"
 DEFAULT_SHARE_PASSWORD="FrogsHouseLight"
 DEFAULT_SHARE_NAME="files"
@@ -94,13 +95,17 @@ if [[ $(grep -c "\[$RCLONE_CONFIG_SECTION_NAME\]" "$RCLONE_CONFIG_FILE") != "1" 
   exit 1
 fi
 
-HOST_UID=$(ls -n /config/rclone.conf | sed -E 's/ +/ /g' | cut -d' ' -f3)
-HOST_GID=$(ls -n /config/rclone.conf | sed -E 's/ +/ /g' | cut -d' ' -f4)
-
 echo ""
-echo "Setting up"
-echo "Config:"
-cat << EOF
+if [[ -e "$SETUP_COMPLETE_FILE" ]]; then
+  echo "Container already setup. Skipping setup."
+else
+  HOST_UID=$(ls -n /config/rclone.conf | sed -E 's/ +/ /g' | cut -d' ' -f3)
+  HOST_GID=$(ls -n /config/rclone.conf | sed -E 's/ +/ /g' | cut -d' ' -f4)
+
+  echo ""
+  echo "Setting up"
+  echo "Config:"
+  cat << EOF
   RCLONE_DESTINATION: $RCLONE_DESTINATION
   SHARE_USERNAME: $SHARE_USERNAME
   SHARE_PASSWORD: $SHARE_PASSWORD
@@ -108,30 +113,33 @@ cat << EOF
   HOSTNAME: $HOSTNAME
 EOF
 
-echo "Generating hostname file"
-echo "$HOSTNAME" > /etc/hostname
+  echo "Generating hostname file"
+  echo "$HOSTNAME" > /etc/hostname
 
-echo "Generating samba config"
-cat /config-base/smb.conf | \
-  sed -E "s/HOSTNAME/$HOSTNAME/g" | \
-  sed -E "s/SHARE_NAME/$SHARE_NAME/g" | \
-  sed -E "s/SHARE_USERNAME/$SHARE_USERNAME/g" > /etc/samba/smb.conf
+  echo "Generating samba config"
+  cat /config-base/smb.conf | \
+    sed -E "s/HOSTNAME/$HOSTNAME/g" | \
+    sed -E "s/SHARE_NAME/$SHARE_NAME/g" | \
+    sed -E "s/SHARE_USERNAME/$SHARE_USERNAME/g" > /etc/samba/smb.conf
 
-echo "Generating supervisord config"
-cat /config-base/supervisord.conf | \
-  sed -E "s/SHARE_USERNAME/$SHARE_USERNAME/g" > /etc/supervisord.conf
+  echo "Generating supervisord config"
+  cat /config-base/supervisord.conf | \
+    sed -E "s/SHARE_USERNAME/$SHARE_USERNAME/g" > /etc/supervisord.conf
 
-echo "Creating local user to match owner of rclone.conf with UID: $HOST_UID and GID: $HOST_GID."
-addgroup -g "$HOST_GID" "$SHARE_USERNAME"
-adduser -D -H -G "$SHARE_USERNAME" -s /bin/false -u "$HOST_UID" "$SHARE_USERNAME"
+  echo "Creating local user to match owner of rclone.conf with UID: $HOST_UID and GID: $HOST_GID."
+  addgroup -g "$HOST_GID" "$SHARE_USERNAME"
+  adduser -D -H -G "$SHARE_USERNAME" -s /bin/false -u "$HOST_UID" "$SHARE_USERNAME"
 
-echo "Creating /files and setting permissions"
-mkdir /files
-chown -R "$HOST_UID:$HOST_GID" /files
-chmod -R 755 /files
+  echo "Creating /files and setting permissions"
+  mkdir /files
+  chown -R "$HOST_UID:$HOST_GID" /files
+  chmod -R 755 /files
 
-echo "Setting samba password"
-echo -e "${SHARE_PASSWORD}\n${SHARE_PASSWORD}" | smbpasswd -a -s -c /etc/samba/smb.conf "$SHARE_USERNAME"
+  echo "Setting samba password"
+  echo -e "${SHARE_PASSWORD}\n${SHARE_PASSWORD}" | smbpasswd -a -s -c /etc/samba/smb.conf "$SHARE_USERNAME"
+
+  echo "1" > "$SETUP_COMPLETE_FILE"
+fi
 
 echo ""
 echo "Starting supervisord"
