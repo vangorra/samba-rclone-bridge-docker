@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine:3.7
 
 RUN apk --no-progress update && \
 	apk --no-cache add samba bash inotify-tools supervisor ca-certificates && \
